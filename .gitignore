@@ -1,9 +1,21 @@
+# Python
 .venv
+venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
+*.db
 db.sqlite3
+todo.db
 
+# Node.js
 frontend/node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

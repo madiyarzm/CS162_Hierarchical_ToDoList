@@ -180,6 +180,29 @@ def handle_item(item_id):
             if not target_list:
                 return jsonify({"error": "Target list not found"}), 404
             item.list_id = data["list_id"]
+        if "parent_id" in data:
+            # Allow setting parent_id to None (making it top-level) or to another item's ID
+            if data["parent_id"] is None:
+                item.parent_id = None
+            else:
+                # Verify the parent item exists and belongs to the same user
+                parent_item = (
+                    TodoItem.query.join(TodoList)
+                    .filter(TodoItem.id == data["parent_id"], TodoList.user_id == current_user.id)
+                    .first()
+                )
+                if not parent_item:
+                    return jsonify({"error": "Parent item not found"}), 404
+                # Prevent making item its own parent or creating circular references
+                if parent_item.id == item.id:
+                    return jsonify({"error": "Cannot make item its own parent"}), 400
+                # Check for circular reference (parent is a descendant of this item)
+                current = parent_item
+                while current and current.parent_id:
+                    if current.parent_id == item.id:
+                        return jsonify({"error": "Cannot create circular reference"}), 400
+                    current = TodoItem.query.get(current.parent_id)
+                item.parent_id = data["parent_id"]
         db.session.commit()
         return jsonify({"message": "Item updated successfully"})
     else:
