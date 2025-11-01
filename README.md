@@ -2,6 +2,9 @@
 
 A full-stack web application that allows users to create, manage, and organize hierarchical todo lists with up to 3 levels of nesting.
 
+# Link to the Demo
+https://www.loom.com/share/91ddb50260924a10ad1223092ac8a5bc
+
 ## Features
 
 ### Core Functionality
@@ -292,33 +295,6 @@ The frontend will run on `http://localhost:3000` by default.
    - **UX**: Auto-focus and text selection for quick editing
    - **Keyboard**: Enter to save, Escape to cancel
 
-## Demo Video
-
-[Link to your demo video here]
-
-Please record a 3-5 minute screen recording demonstrating:
-- User registration/login
-- Creating lists
-- Creating tasks and subtasks (3 levels)
-- Marking tasks as complete
-- Expanding/collapsing tasks
-- Moving top-level tasks between lists (using → button)
-- Editing tasks (inline editing)
-- Drag-and-drop reorganization within a list
-- Deleting tasks
-
-Recommended tools: [Loom](https://loom.com/) (free for .edu accounts) or similar screen recording software.
-
-## Future Enhancements
-
-Potential extensions beyond MVP:
-- Infinite nesting support
-- Enhanced drag-and-drop with visual feedback
-- Due dates and priorities
-- Search functionality
-- Task sharing/collaboration
-- Mobile app version
-- Export/import functionality
 
 ## Troubleshooting
 
@@ -368,9 +344,4 @@ This project is for educational purposes as part of CS162 coursework.
 
 ## Author
 
-[Your Name]
-
-## Acknowledgments
-
-- Flask and React documentation
-- CS162 course materials and TAs
+Madiyar Zhunussov

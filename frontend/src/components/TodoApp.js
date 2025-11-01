@@ -1,3 +1,4 @@
+// Main todo application UI: lists, tabs, and high-level actions
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import TodoList from './TodoList';
@@ -10,11 +11,16 @@ function TodoApp({ setIsAuthenticated }) {
   const [newListTitle, setNewListTitle] = useState('');
   const history = useHistory();
 
+  // selectedList: the list shown in the preview area
+  // activeTab: 'preview' shows tasks, 'dashboard' shows list management
+
   useEffect(() => {
+    // Load user's lists when the app starts
     fetchLists();
   }, []);
 
   const fetchLists = async () => {
+    // Get lists from the backend for the logged-in user
     try {
       const response = await axios.get('/api/lists');
       setLists(response.data);
@@ -22,6 +28,7 @@ function TodoApp({ setIsAuthenticated }) {
         setSelectedList(response.data[0]);
       }
     } catch (err) {
+      // If not authenticated, redirect to login
       if (err.response && err.response.status === 401) {
         setIsAuthenticated(false);
         history.push('/login');
@@ -30,6 +37,7 @@ function TodoApp({ setIsAuthenticated }) {
   };
 
   const handleLogout = () => {
+    // Local logout: clear UI auth state and go back to login screen
     setIsAuthenticated(false);
     history.push('/login');
   };
@@ -37,7 +45,7 @@ function TodoApp({ setIsAuthenticated }) {
   const handleCreateList = async (e) => {
     e.preventDefault();
     if (!newListTitle.trim()) return;
-
+    // Create a new list on the server and select it locally
     try {
       const response = await axios.post('/api/lists', { title: newListTitle });
       setLists([...lists, response.data]);

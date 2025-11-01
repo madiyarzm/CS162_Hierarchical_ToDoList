@@ -1,3 +1,4 @@
+// Top-level React component: routing and auth state
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Route, Switch, Redirect } from 'react-router-dom';
 import Login from './components/Login';

@@ -1,3 +1,4 @@
+# Backend Flask app: models, routes, and SQLite DB configuration (todo.db)
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
@@ -17,18 +18,23 @@ app = Flask(__name__)
 CORS(app)
 bcrypt = Bcrypt(app)
 
-# Configuration
+# Create Flask app and enable CORS and password hashing
+
+# App configuration: secret key (sessions) and SQLite DB location
 app.config["SECRET_KEY"] = "your-secret-key"  # Change this to a secure secret key
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///todo.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Initialize extensions
+# Initialize extensions: database (SQLAlchemy) and login manager
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
 
-# Models
+# Database models
+# User: app users with username/password
+# TodoList: named list owned by a user
+# TodoItem: tasks; supports hierarchy via parent_id and children relationship
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -57,12 +63,14 @@ class TodoItem(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
+    # Load a user by id for session management
     return User.query.get(int(user_id))
 
 
-# Routes
+# Routes (API endpoints)
 @app.route("/api/register", methods=["POST"])
 def register():
+    # Register a new user
     data = request.get_json()
     hashed_password = bcrypt.generate_password_hash(data["password"]).decode("utf-8")
     new_user = User(username=data["username"], password=hashed_password)
@@ -76,6 +84,7 @@ def register():
 
 @app.route("/api/login", methods=["POST"])
 def login():
+    # Login: check credentials and start a session
     data = request.get_json()
     user = User.query.filter_by(username=data["username"]).first()
     if user and bcrypt.check_password_hash(user.password, data["password"]):
@@ -87,6 +96,8 @@ def login():
 @app.route("/api/lists", methods=["GET", "POST"])
 @login_required
 def handle_lists():
+    # GET: return lists owned by the logged-in user
+    # POST: create a new list for the current user
     if request.method == "GET":
         lists = TodoList.query.filter_by(user_id=current_user.id).all()
         return jsonify([{"id": lst.id, "title": lst.title} for lst in lists])
@@ -101,10 +112,13 @@ def handle_lists():
 @app.route("/api/lists/<int:list_id>/items", methods=["GET", "POST"])
 @login_required
 def handle_items(list_id):
+    # Ensure the list exists and belongs to the current user
     todo_list = TodoList.query.filter_by(id=list_id, user_id=current_user.id).first()
     if not todo_list:
         return jsonify({"error": "List not found"}), 404
 
+    # GET: return top-level items (parent_id is None) and include nested children
+    # POST: create a new item in this list (can include parent_id to make it a sub-item)
     if request.method == "GET":
         items = TodoItem.query.filter_by(list_id=list_id, parent_id=None).all()
         return jsonify(
@@ -140,6 +154,7 @@ def handle_items(list_id):
 
 
 def get_children(item):
+    # Build a nested list of children recursively for JSON responses
     return [
         {
             "id": child.id,
@@ -161,9 +176,11 @@ def handle_item(item_id):
         .first()
     )
 
+    # Item must exist and belong to a list owned by the user
     if not item:
         return jsonify({"error": "Item not found"}), 404
 
+    # PUT: update fields on the item (content, completed, is_expanded, list_id, parent_id)
     if request.method == "PUT":
         data = request.get_json()
         if "content" in data:
@@ -188,7 +205,10 @@ def handle_item(item_id):
                 # Verify the parent item exists and belongs to the same user
                 parent_item = (
                     TodoItem.query.join(TodoList)
-                    .filter(TodoItem.id == data["parent_id"], TodoList.user_id == current_user.id)
+                    .filter(
+                        TodoItem.id == data["parent_id"],
+                        TodoList.user_id == current_user.id,
+                    )
                     .first()
                 )
                 if not parent_item:
@@ -200,18 +220,24 @@ def handle_item(item_id):
                 current = parent_item
                 while current and current.parent_id:
                     if current.parent_id == item.id:
-                        return jsonify({"error": "Cannot create circular reference"}), 400
+                        return (
+                            jsonify({"error": "Cannot create circular reference"}),
+                            400,
+                        )
                     current = TodoItem.query.get(current.parent_id)
                 item.parent_id = data["parent_id"]
+        # Save updates to the item
         db.session.commit()
         return jsonify({"message": "Item updated successfully"})
     else:
+        # DELETE: remove item and commit
         db.session.delete(item)
         db.session.commit()
         return jsonify({"message": "Item deleted successfully"})
 
 
 if __name__ == "__main__":
+    # On startup, create tables (if missing) and run the dev server
     with app.app_context():
         db.create_all()
     app.run(debug=True)

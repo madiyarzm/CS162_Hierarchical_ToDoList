@@ -1,14 +1,20 @@
+// Component that renders a single todo list and its items
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import TodoItem from './TodoItem';
 
 function TodoList({ list, lists, onListRefresh }) {
+  // Props:
+  // - list: the currently selected list object (id, title)
+  // - lists: array of all lists (used for moving tasks between lists)
+  // - onListRefresh: callback to refresh lists in parent when they change
   const [items, setItems] = useState([]);
   const [newItemContent, setNewItemContent] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [dragOverContainer, setDragOverContainer] = useState(false);
 
   useEffect(() => {
+    // Load items for the selected list
     fetchItems();
   }, [list.id]);
 
@@ -20,6 +26,7 @@ function TodoList({ list, lists, onListRefresh }) {
   }, [items.length]);
 
   const fetchItems = async () => {
+    // Load items for this list from the server (returns nested items)
     try {
       const response = await axios.get(`/api/lists/${list.id}/items`);
       setItems(response.data);

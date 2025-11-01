@@ -1,3 +1,6 @@
+// Register form component
+// - Props: setIsAuthenticated(callback) to update app auth state after success
+// - Creates a new user then logs them in and redirects to the tasks view
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useHistory } from 'react-router-dom';
@@ -10,6 +13,7 @@ function Register({ setIsAuthenticated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Send registration data to backend. On success, automatically log in.
     try {
       await axios.post('/api/register', { username, password });
       const loginResponse = await axios.post('/api/login', { username, password });

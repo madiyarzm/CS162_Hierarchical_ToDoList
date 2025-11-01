@@ -1,3 +1,10 @@
+// Login form component
+// - Props: setIsAuthenticated(callback) to update app auth state
+// - Sends credentials to backend and redirects on success
+// Login form component
+// - Props: setIsAuthenticated(callback) to update app auth state after success
+// - Small form with username/password fields; submits to the backend API
+// - On success it marks the UI as logged in and navigates to the tasks page
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useHistory } from 'react-router-dom';
@@ -10,14 +17,18 @@ function Login({ setIsAuthenticated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(''); // Clear any previous errors
     try {
       const response = await axios.post('/api/login', { username, password });
-      if (response.data.message) {
+      // Only proceed if we got a successful response (status 200)
+      if (response.status === 200 && response.data.message === 'Logged in successfully') {
         setIsAuthenticated(true);
         history.push('/todos');
+      } else {
+        setError('Login failed. Please check your credentials.');
       }
     } catch (err) {
-      setError('Invalid username or password');
+      setError(err.response?.data?.error || 'Invalid username or password');
     }
   };
 

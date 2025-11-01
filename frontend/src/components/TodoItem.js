@@ -1,7 +1,17 @@
+// Individual todo item: rendering, editing, drag-and-drop and subtask handling
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 function TodoItem({ item, onUpdate, onDelete, listId, level, lists, onItemMoved, allItems }) {
+  // Props:
+  // - item: this task object (id, content, completed, children...)
+  // - onUpdate(itemId, updates): callback to send changes to server
+  // - onDelete(itemId): callback to delete the task
+  // - listId: id of the current list the item belongs to
+  // - level: nesting level (0 = top-level)
+  // - lists: all available lists (used when moving between lists)
+  // - onItemMoved: callback to refresh after moves
+  // State notes: showSubItemForm toggles add-subtask UI; dragOver flags control DnD visuals
   const [newSubItemContent, setNewSubItemContent] = useState('');
   const [showSubItemForm, setShowSubItemForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -45,6 +55,7 @@ function TodoItem({ item, onUpdate, onDelete, listId, level, lists, onItemMoved,
   }, [showMoveListDropdown]);
 
   const handleToggleComplete = () => {
+    // Toggle completed state (sends update to backend)
     onUpdate(item.id, { completed: !item.completed });
   };
 
@@ -55,11 +66,11 @@ function TodoItem({ item, onUpdate, onDelete, listId, level, lists, onItemMoved,
   const handleCreateSubItem = async (e) => {
     e.preventDefault();
     if (!newSubItemContent.trim() || level >= 2) return; // Limit to 3 levels
-
+    // Create a subtask and refresh the parent item
     try {
       await axios.post(`/api/lists/${listId}/items`, {
         content: newSubItemContent,
-        parent_id: item.id
+        parent_id: item.id,
       });
       setNewSubItemContent('');
       setShowSubItemForm(false);
@@ -77,6 +88,7 @@ function TodoItem({ item, onUpdate, onDelete, listId, level, lists, onItemMoved,
   const handleSaveEdit = async () => {
     if (editContent.trim() && editContent !== item.content) {
       try {
+        // Save edited text to the server
         await onUpdate(item.id, { content: editContent.trim() });
       } catch (err) {
         console.error('Error updating content:', err);
@@ -100,6 +112,7 @@ function TodoItem({ item, onUpdate, onDelete, listId, level, lists, onItemMoved,
 
   // Drag and Drop Handlers
   const handleDragStart = (e) => {
+    // Start dragging this item (UI + transfer data)
     setIsDragging(true);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', JSON.stringify({ 
@@ -167,6 +180,7 @@ function TodoItem({ item, onUpdate, onDelete, listId, level, lists, onItemMoved,
     setDragOver(false);
     setDragOverAsChild(false);
 
+    // Handle drop: decide if dragged item becomes a child or sibling, then update
     try {
       const data = JSON.parse(e.dataTransfer.getData('text/plain'));
       const draggedItemId = data.itemId;
@@ -177,35 +191,28 @@ function TodoItem({ item, onUpdate, onDelete, listId, level, lists, onItemMoved,
         return;
       }
 
-      // Determine drop position
+      // Determine drop position (bottom half => child)
       const rect = cardRef.current?.getBoundingClientRect();
       const y = e.clientY;
       const midY = rect ? rect.top + rect.height / 2 : 0;
-      
-      // If dropped in the bottom half (children area), make it a child
-      // Otherwise, make it a sibling (or top-level if this is top-level)
       const makeChild = y > midY && level < 2;
 
       let updates = {};
-      
       if (makeChild) {
-        // Make it a child of this item
         updates = { parent_id: item.id, list_id: listId };
       } else {
-        // Make it a sibling (same parent as this item)
-        // If this item has no parent (top-level), the dragged item also becomes top-level
         const parentId = item.parent_id || null;
         updates = { parent_id: parentId, list_id: listId };
       }
 
-      // Only allow moving between lists if it's a top-level task (MVP requirement)
+      // Enforce rule: only top-level items may change lists
       const draggedLevel = data.level || 0;
       if (draggedListId !== listId && draggedLevel !== 0) {
         alert('Only top-level tasks can be moved to different lists');
         return;
       }
 
-      // Only update if moving between lists or changing parent within same list
+      // Apply update and refresh
       if (draggedListId !== listId || updates.parent_id !== (item.parent_id || null)) {
         await onUpdate(draggedItemId, updates);
         if (onItemMoved) {
@@ -226,7 +233,6 @@ function TodoItem({ item, onUpdate, onDelete, listId, level, lists, onItemMoved,
     try {
       const data = JSON.parse(e.dataTransfer.getData('text/plain'));
       const draggedListId = data.listId;
-      const draggedLevel = data.level || 0;
       
       // Only allow if from same list, or if top-level from another list (but then it won't become a child)
       if (draggedListId === listId && !isDragging && level < 2) {
@@ -547,6 +553,7 @@ function TodoItem({ item, onUpdate, onDelete, listId, level, lists, onItemMoved,
       </div>
 
       {item.is_expanded && item.children && (
+        // Render child items recursively (subtasks)
         <div className="children-container">
           {item.children.map((child) => (
             <TodoItem
